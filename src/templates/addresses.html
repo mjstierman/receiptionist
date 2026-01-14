@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+
+{% block title %} Manage Addresses {% endblock %}
+
+{% block main %}
+
+<html lang="en">
+    <body>
+        <div class="header">
+            <h1>Addresses</h1>
+        </div>
+        <div class="container-fluid" style="display: flex; gap: 50px;">
+            <div class="col-mb-1" style="max-width: 400px">
+
+                <h2>Update Addresses</h2>
+                <form action="/addresses" method="POST" name="add">
+                    <select name="id">
+                        <option value="" selected>New Address</option>
+                        <option value="" disabled>──────────</option>
+                        {% for address in addresses %}
+                            <option value="{{ address['id'] }}">{{ address['name'] }}</option>
+                        {% endfor %}
+                    </select>
+                    <input name="name" placeholder="name" type="text" required>
+                    <input name="street1" placeholder="Street 1" type="text">
+                    <input name="street2" placeholder="Street 2" type="text">
+                    <input name="city" placeholder="City" type="text" required>
+                    <input name="state" placeholder="State" type="text">
+                    <input name="postal" placeholder="Postal Code" type="text">
+                    <input name="country" placeholder="Country" type="text" required><br><br>
+                    <button type="submit" class="btn btn-primary">Update Address</button>
+                </form>
+            </div>
+            <div class="section">
+
+                <h2>All Addresses</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Street 1</th>
+                            <th>Street 2</th>
+                            <th>City</th>
+                            <th>State</th>
+                            <th>Postal Code</th>
+                            <th>Country</th>
+                            <th>Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for address in addresses %}
+                            <tr>
+                                <td>{{ address['name'] }}</td>
+                                <td>{{ address['street1'] }}</td>
+                                <td>{{ address['street2'] }}</td>
+                                <td>{{ address['city'] }}</td>
+                                <td>{{ address['state'] }}</td>
+                                <td>{{ address['postal'] }}</td>
+                                <td>{{ address['country'] }}</td>
+                                <td><form action="/addresses" method="POST" name="delete">
+                                    <div align="center"><button name="delete" value="{{ address['id']}}">X</div></form></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </body>
+
+{% endblock %}

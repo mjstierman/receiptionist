@@ -1,0 +1,71 @@
+{% extends "layout.html" %}
+
+{% block title %} Dashboard {% endblock %}
+
+{% block main %}
+
+<div class="container-fluid">
+    <div class="header">
+        <h1>Dashboard</h1>
+    </div>
+    <div class="container">
+        <div class="section">
+            <h2>Overview</h2>
+            <p>Welcome to your dashboard.</p>
+        </div>
+        <div>
+            {% if month_spending > 0 %}
+                <strong><p style="color: red;">Warning: You have overspent your budget by {{ currency_symbol }}{{ month_spending }}</p></strong>
+            {% elif month_spending < 0 %}
+                <strong><p style="color: green;">Good job! You are under your budget by {{ currency_symbol }}{{ -month_spending }}</p></strong>
+            {% else %}
+                <p>You are on track with your budget.</p>
+            {% endif %}
+        </div>
+        <div>
+            <p>Top 10 Categories by spending:</p>
+            <ul>
+                {% for category in top_categories %}
+                    <li>{{ category['name'] }}: {{ category['total_amount'] }}</li>
+                {% endfor %}
+        </div>
+        <div>
+            <p>Receipts from This Month:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Category</th>
+                        <th>Tags</th>
+                        <th>Items</th>
+                        <th>Merchant</th>
+                        <th>Location</th>
+                        <th>Account</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for receipt in receipts %}
+                        <tr>
+                            <td>{{ receipt['date'] }}</td>
+                            <td>{{ receipt['category'] }}</td>
+                            <td>{{ receipt['tags'] }}</td>
+                            <td>{{ receipt['items'] }}</td>
+                            <td>{{ receipt['merchant'] }}</td>
+                            <td>{{ receipt['location'] }}</td>
+                            <td>{{ receipt['account'] }}</td>
+                            <td>
+                                {% if receipt['income'] %}
+                                    <p style="color: green;">{{ receipt['amount'] }}</p>
+                                {% else %}
+                                    <p style="color: black;">{{ receipt['amount'] }}</p>
+                                {% endif %}
+                            </td>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

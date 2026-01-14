@@ -1,0 +1,69 @@
+{% extends "layout.html" %}
+
+{% block title %} Manage Accounts {% endblock %}
+
+{% block main %}
+
+<html lang="en">
+    <body>
+        <div class="header">
+            <h1>Accounts</h1>
+        </div>
+        <div class="container-fluid" style="display: flex; gap: 50px;">
+            <div class="col-mb-1" style="max-width: 400px">
+
+                <h2>Update Accounts</h2>
+                <form action="/accounts" method="POST">
+                    <select name="id" class="form-select" aria-label="Select Account">
+                        <option value="" selected>New Account</option>
+                        <option value="" disabled>──────────</option>
+                        {% for account in accounts %}
+                            <option value="{{ account['id'] }}">{{ account['name'] }}</option>
+                        {% endfor %}
+                    </select>
+                    <input name="name" placeholder="name" type="text" required>
+                    <select name="merchant" required>
+                        <option value="" disabled selected>Select Merchant</option>
+                        {% for merchant in merchants %}
+                            <option value="{{ merchant['name'] }}">{{ merchant['name'] }}</option>
+                        {% endfor %}
+                    </select>
+                    <input name="lastfour" placeholder="last four digits" type="number" required>
+                    <input name="balance" placeholder="balance" type="number" step="0.01" required>
+                    <input type="submit" value="Update Account">
+                </form>
+            </div>
+
+            <div class="section">
+
+                <h2>All Accounts</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Name</th>
+                            <th>Merchant</th>
+                            <th>Last Four Digits</th>
+                            <th>Balance</th>
+                            <th>Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account in accounts %}
+                            <tr>
+                                <td><input type="checkbox"></td>
+                                <td>{{ account['name'] }}</td>
+                                <td>{{ account['merchant'] }}</td>
+                                <td>{{ account['lastfour'] }}</td>
+                                <td>{{ account['balance'] }}</td>
+                                <td><form action="/accounts" method="POST" name="delete">
+                                    <div align="center"><button name="delete" value="{{ account['id']}}">X</div></form></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </body>
+
+{% endblock %}

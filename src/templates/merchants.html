@@ -1,0 +1,59 @@
+{% extends "layout.html" %}
+
+{% block title %} Manage Merchants {% endblock %}
+
+{% block main %}
+
+        <div class="header">
+            <h1>Merchants</h1>
+        </div>
+        <div class="container-fluid" style="display: flex; gap: 50px;">
+            <div class="col-mb-1" style="max-width: 400px">
+                <h2>Update Merchants</h2>
+                <form action="/merchants" method="POST">
+                    <select name="id" class="form-select" aria-label="Select Merchant">
+                        <option value="" selected>New Merchant</option>
+                        <option value="" disabled>──────────</option>
+                        {% for merchant in merchants %}
+                            <option value="{{ merchant['id'] }}">{{ merchant['name'] }}</option>
+                        {% endfor %}
+                    </select><br>
+                    <input name="name" placeholder="name" type="text" required><br>
+                    <select name="location" class="form-select" required>
+                        <option value="" disabled selected>Select Address</option>
+                        {% for address in addresses %}
+                            <option value="{{ address['name'] }}">{{ address['name'] }}</option>
+                        {% endfor %}
+                    </select><br>
+                    <button type="submit" class="btn btn-primary">Update Merchant</button>
+                </form>
+            </div>
+
+            <div class="section">
+
+                <h2>All Merchants</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Name</th>
+                            <th>Location</th>
+                            <th>Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for merchant in merchants %}
+                            <tr>
+                                <td><input type="checkbox"></td>
+                                <td>{{ merchant['name'] }}</td>
+                                <td>{{ merchant['location'] }}</td>
+                                <td><form action="/merchants" method="POST" name="delete">
+                                    <div align="center"><button name="delete" value="{{ merchant['id']}}">X</div></form></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+{% endblock %}

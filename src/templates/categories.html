@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+
+{% block title %} Manage Categories {% endblock %}
+
+{% block main %}
+
+<html lang="en">
+    <body>
+        <div class="header">
+            <h1>Categories</h1>
+        </div>
+        <div class="container-fluid" style="display: flex; gap: 50px;">
+            <div class="col-mb-1" style="max-width: 400px">
+                <h2>Update Categories</h2>
+                <form action="/categories" method="POST">
+                    <select name="id" class="form-select" aria-label="Select Category">
+                        <option value="" selected>New Category</option>
+                        <option value="" disabled>──────────</option>
+                        {% for category in Categories %}
+                            <option value="{{ category['id'] }}">{{ category['name'] }}</option>
+                        {% endfor %}
+                    </select>
+                    <input name="name" placeholder="name" type="text" required>
+                    <button type="submit" class="btn btn-primary">Update Category</button><br>
+                </form>
+            </div>
+
+            <div class="section">
+
+                <h2>All Categories</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Name</th>
+                            <th>Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in Categories %}
+                            <tr>
+                                <td><input type="checkbox"></td>
+                                <td>{{ category['name'] }}</td>
+                                <td><form action="/categories" method="POST" name="delete">
+                                    <div align="center"><button name="delete" value="{{ category['id']}}">X</div></form></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </body>
+
+{% endblock %}
