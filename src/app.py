@@ -371,6 +371,10 @@ def categories():
 @app.route("/dashboard")
 def dashboard():
     """ Load the dashboard page """
+    # Check to make sure thee are receipts to show
+    if db.execute("SELECT COUNT(*) as count FROM receipts")[0]['count'] <= 0:
+        return redirect("/receipts")
+    
     top_categories = topTenCategories()
     print("Top categories:", top_categories)
 

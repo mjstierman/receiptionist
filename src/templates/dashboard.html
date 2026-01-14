@@ -25,9 +25,13 @@
         <div>
             <p>Top 10 Categories by spending:</p>
             <ul>
-                {% for category in top_categories %}
-                    <li>{{ category['name'] }}: {{ category['total_amount'] }}</li>
-                {% endfor %}
+                {% if top_categories %}
+                    {% for category in top_categories %}
+                        <li>{{ category['name'] }}: {{ category['total_amount'] }}</li>
+                    {% endfor %}
+                {% else %}
+                    <li>No spending data available.</li>
+                {% endif %}
         </div>
         <div>
             <p>Receipts from This Month:</p>
@@ -45,23 +49,29 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for receipt in receipts %}
+                    {% if receipts %}
+                        {% for receipt in receipts %}
+                            <tr>
+                                <td>{{ receipt['date'] }}</td>
+                                <td>{{ receipt['category'] }}</td>
+                                <td>{{ receipt['tags'] }}</td>
+                                <td>{{ receipt['items'] }}</td>
+                                <td>{{ receipt['merchant'] }}</td>
+                                <td>{{ receipt['location'] }}</td>
+                                <td>{{ receipt['account'] }}</td>
+                                <td>
+                                    {% if receipt['income'] %}
+                                        <p style="color: green;">{{ receipt['amount'] }}</p>
+                                    {% else %}
+                                        <p style="color: black;">{{ receipt['amount'] }}</p>
+                                    {% endif %}
+                                </td>
+                        {% endfor %}
+                    {% else %}
                         <tr>
-                            <td>{{ receipt['date'] }}</td>
-                            <td>{{ receipt['category'] }}</td>
-                            <td>{{ receipt['tags'] }}</td>
-                            <td>{{ receipt['items'] }}</td>
-                            <td>{{ receipt['merchant'] }}</td>
-                            <td>{{ receipt['location'] }}</td>
-                            <td>{{ receipt['account'] }}</td>
-                            <td>
-                                {% if receipt['income'] %}
-                                    <p style="color: green;">{{ receipt['amount'] }}</p>
-                                {% else %}
-                                    <p style="color: black;">{{ receipt['amount'] }}</p>
-                                {% endif %}
-                            </td>
-                    {% endfor %}
+                            <td colspan="8">No receipts available for this month.</td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
