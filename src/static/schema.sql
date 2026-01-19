@@ -41,6 +41,7 @@ CREATE TABLE receipts (
     account INTEGER,
     amount DECIMAL(30, 2) NOT NULL,
     income BOOLEAN DEFAULT 0 NOT NULL,
+    image BLOB,
     FOREIGN KEY (account) REFERENCES accounts(id),
     FOREIGN KEY (category) REFERENCES categories(id),
     FOREIGN KEY (location) REFERENCES addresses(id),
