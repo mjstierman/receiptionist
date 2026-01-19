@@ -21,6 +21,13 @@ def index():
     """ Redirect to dashboard """
     return redirect("/dashboard")
 
+@app.route("/layout")
+def layout():
+    """ Load the layout page """
+    if db.execute("SELECT COUNT(*) as count FROM receipts")[0]['count'] <= 0:
+        receipts = True
+    return render_template("layout.html", receipts=receipts)
+
 @app.route("/receipts", methods=["GET", "POST"])
 def receipts():
     """ Load the home page """
