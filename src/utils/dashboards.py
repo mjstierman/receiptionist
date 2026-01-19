@@ -1,8 +1,4 @@
-import config
-
-db = config.db
-
-def topTenCategories():
+def topTenCategories(db):
     """ Get the top ten categories by total amount spent """
     query = """
         SELECT c.name, SUM(r.amount) as total_amount
@@ -14,7 +10,7 @@ def topTenCategories():
     """
     return db.execute(query)
 
-def thisMonthSpending():
+def thisMonthSpending(db):
     """ Get net spending for the current month """
     query = """
         SELECT 
@@ -27,7 +23,7 @@ def thisMonthSpending():
     net_spending = result[0]['total_spent'] - result[0]['total_income']
     return net_spending
 
-def thisMonthsReceipts():
+def thisMonthsReceipts(db):
     """ Get all receipts for the current month """
     query = """
         SELECT *

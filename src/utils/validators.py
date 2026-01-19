@@ -1,9 +1,36 @@
 
 import pytz
+import sqlite3
 
 from datetime import datetime as dt
 
 """ Validate Inputs Server-Side """
+
+def createDB(schema_file):
+    """ Create a new database file from schema """
+    # Read the schema file
+    schema = open(schema_file, "r").read()
+    # Create the database
+    db = open("app.db", "w")
+    conn = sqlite3.connect("app.db")
+    cursor = conn.cursor()
+    # Execute the schema statements
+    for statement in schema.split(';'):
+        statement = statement.strip()
+        if statement:  # Check if the statement is not empty
+            cursor.execute(statement)
+    conn.commit()
+    conn.close()
+    db.close()
+
+def lastFour(card_number):
+    """ Ensure only last four chars of card number are stored """
+    if len(card_number) <= 4:
+        return card_number
+    elif len(card_number) > 4:
+        return card_number[-4:]
+    print("Invalid card number")
+    return False
 
 def toCurrency(number):
     """ Transform the value a two-decimal number """   
@@ -51,11 +78,3 @@ def toUTC(datestr, timezone):
         print("Error converting to UTC:", e)
         return False
 
-def lastFour(card_number):
-    """ Ensure only last four chars of card number are stored """
-    if len(card_number) <= 4:
-        return card_number
-    elif len(card_number) > 4:
-        return card_number[-4:]
-    print("Invalid card number")
-    return False

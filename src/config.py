@@ -1,9 +1,8 @@
 """ Configuration for Finfo application """
 
-from cs50 import SQL
-
 # SQL database configuration
-db = SQL("sqlite:///app.db")
+database_url = "sqlite:///app.db"
+schema_path = "static/schema.sql"
 
 # Default currency symbol
 currency_symbol = "$"

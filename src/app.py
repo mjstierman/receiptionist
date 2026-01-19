@@ -1,9 +1,9 @@
 import config
 
+from cs50 import SQL
 from flask import Flask, render_template, redirect, request
-
 from utils.dashboards import topTenCategories, thisMonthSpending, thisMonthsReceipts
-from utils.validators import toCurrency, toDatetime, toUTC, lastFour
+from utils.validators import toCurrency, toDatetime, toUTC, lastFour, createDB
 
 app = Flask(__name__)
 
@@ -11,7 +11,10 @@ app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 # Configure CS50 Library to use SQLite database
-db = config.db
+try:
+    db = SQL(config.database_url)
+except Exception:
+    db = createDB(config.schema_path)
 
 @app.route("/")
 def index():
@@ -375,13 +378,13 @@ def dashboard():
     if db.execute("SELECT COUNT(*) as count FROM receipts")[0]['count'] <= 0:
         return redirect("/receipts")
     
-    top_categories = topTenCategories()
+    top_categories = topTenCategories(db)
     print("Top categories:", top_categories)
 
-    month_spending = thisMonthSpending()
+    month_spending = thisMonthSpending(db)
     print("This month spending:", month_spending)
 
-    month_receipts = thisMonthsReceipts()
+    month_receipts = thisMonthsReceipts(db)
     print("This month's receipts:", month_receipts)
 
     for receipt in month_receipts:
