@@ -6,7 +6,7 @@ from datetime import datetime as dt
 
 """ Validate Inputs Server-Side """
 
-def createDB(schema_file):
+def create_db(schema_file):
     """ Create a new database file from schema """
     # Read the schema file
     schema = open(schema_file, "r").read()
@@ -23,7 +23,7 @@ def createDB(schema_file):
     conn.close()
     db.close()
 
-def lastFour(card_number):
+def last_four_account(card_number):
     """ Ensure only last four chars of card number are stored """
     if len(card_number) <= 4:
         return card_number
@@ -32,7 +32,7 @@ def lastFour(card_number):
     print("Invalid card number")
     return False
 
-def toCurrency(number):
+def to_currency(number):
     """ Transform the value a two-decimal number """   
     # Format the number between 0 and 1 billion
     if number.replace('.', '', 1).isdigit():
@@ -42,7 +42,7 @@ def toCurrency(number):
     print("Not a number")
     return False
 
-def toFile(unsafe_file):
+def to_file(unsafe_file):
     """ Validate and read the uploaded file """
     try:
         file_data = unsafe_file.read()
@@ -51,7 +51,7 @@ def toFile(unsafe_file):
         print("File upload error:", e)
         return False
 
-def toDatetime(datetime):
+def to_datedtime(datetime):
     """ Transform the value to a datetime object """
     try:
         print("Parsing datetime:", datetime)
@@ -63,7 +63,7 @@ def toDatetime(datetime):
         print("Invalid date format")
         return False
   
-def toUTC(datestr, timezone):
+def to_utc(datestr, timezone):
     """ Transform the datetime to UTC """
     try:
         print("Converting to UTC:", datestr, timezone)

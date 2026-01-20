@@ -2,8 +2,8 @@ import config
 
 from cs50 import SQL
 from flask import Flask, render_template, redirect, request, Response
-from utils.dashboards import topTenCategories, thisMonthSpending, thisMonthsReceipts
-from utils.validators import toCurrency, toDatetime, toFile, toUTC, lastFour, createDB
+from utils.dashboards import top_ten_categories, this_month_receipts, this_month_spending
+from utils.validators import to_currency, to_datedtime, to_utc, to_file, last_four_account, create_db
 
 app = Flask(__name__)
 
@@ -14,7 +14,7 @@ app.config["TEMPLATES_AUTO_RELOAD"] = True
 try:
     db = SQL(config.database_url)
 except Exception:
-    db = createDB(config.schema_path)
+    db = create_db(config.schema_path)
 
 @app.route("/")
 def index():
@@ -53,11 +53,11 @@ def receipts():
         unsafe_file = request.files['file']
 
         # Validate the data
-        datetime = toDatetime(unsafe_datetime)
-        utc = toUTC(datetime, unsafe_timezone)
+        datetime = to_datedtime(unsafe_datetime)
+        utc = to_utc(datetime, unsafe_timezone)
         tags = unsafe_tags
         items = unsafe_items
-        amount = toCurrency(unsafe_amount)
+        amount = to_currency(unsafe_amount)
         # Get account ID from name
         account_id = db.execute("SELECT id FROM accounts WHERE NAME like ?", unsafe_account)
         account = account_id[0]['id'] if account_id else None
@@ -79,7 +79,7 @@ def receipts():
         # Income flag
         incomeFlag = True if unsafe_incomeFlag == "1" else False
         # File upload
-        file_data = toFile(unsafe_file) if unsafe_file else None
+        file_data = to_file(unsafe_file) if unsafe_file else None
 
         if request.form.get("id"):
             # Editing an existing receipt
@@ -304,8 +304,8 @@ def accounts():
         name = unsafe_name
         merchant_id = db.execute("SELECT id FROM merchants WHERE NAME like ?", unsafe_merchant)
         merchant = merchant_id[0]['id'] if merchant_id else None
-        lastfour = lastFour(unsafe_lastfour)
-        balance = toCurrency(unsafe_balance)
+        lastfour = last_four_account(unsafe_lastfour)
+        balance = to_currency(unsafe_balance)
 
         if request.form.get("id"):
             # Editing an existing account
@@ -403,13 +403,13 @@ def dashboard():
     if db.execute("SELECT COUNT(*) as count FROM receipts")[0]['count'] <= 0:
         return redirect("/receipts")
     
-    top_categories = topTenCategories(db)
+    top_categories = top_ten_categories(db)
     print("Top categories:", top_categories)
 
-    month_spending = thisMonthSpending(db)
+    month_spending = this_month_spending(db)
     print("This month spending:", month_spending)
 
-    month_receipts = thisMonthsReceipts(db)
+    month_receipts = this_month_receipts(db)
     print("This month's receipts:", month_receipts)
 
     for receipt in month_receipts:

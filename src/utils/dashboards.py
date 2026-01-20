@@ -1,4 +1,4 @@
-def topTenCategories(db):
+def top_ten_categories(db):
     """ Get the top ten categories by total amount spent """
     query = """
         SELECT c.name, SUM(r.amount) as total_amount
@@ -10,7 +10,7 @@ def topTenCategories(db):
     """
     return db.execute(query)
 
-def thisMonthSpending(db):
+def this_month_spending(db):
     """ Get net spending for the current month """
     query = """
         SELECT 
@@ -28,7 +28,7 @@ def thisMonthSpending(db):
         print("Error calculating net spending:", e)
         return False
 
-def thisMonthsReceipts(db):
+def this_month_receipts(db):
     """ Get all receipts for the current month """
     query = """
         SELECT *
