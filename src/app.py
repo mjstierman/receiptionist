@@ -1,9 +1,9 @@
 import config
 
 from cs50 import SQL
-from flask import Flask, render_template, redirect, request
+from flask import Flask, render_template, redirect, request, Response
 from utils.dashboards import topTenCategories, thisMonthSpending, thisMonthsReceipts
-from utils.validators import toCurrency, toDatetime, toUTC, lastFour, createDB
+from utils.validators import toCurrency, toDatetime, toFile, toUTC, lastFour, createDB
 
 app = Flask(__name__)
 
@@ -39,7 +39,6 @@ def receipts():
         return redirect("/receipts")
     
     if request.method == "POST":
-        
         # Get the form data
         unsafe_datetime = request.form.get("datetime")
         unsafe_timezone = request.form.get("timezone")
@@ -51,6 +50,7 @@ def receipts():
         unsafe_account = request.form.get("account")
         unsafe_amount = request.form.get("amount")
         unsafe_incomeFlag = request.form.get("income")
+        unsafe_file = request.files['file']
 
         # Validate the data
         datetime = toDatetime(unsafe_datetime)
@@ -78,6 +78,8 @@ def receipts():
         category = category_id[0]['id'] if category_id else None
         # Income flag
         incomeFlag = True if unsafe_incomeFlag == "1" else False
+        # File upload
+        file_data = toFile(unsafe_file) if unsafe_file else None
 
         if request.form.get("id"):
             # Editing an existing receipt
@@ -88,8 +90,8 @@ def receipts():
             if utc and category and amount:
                 print("Updating receipt in database", 
                       utc, category, tags, items, merchant, location, account, amount, incomeFlag)
-                db.execute("UPDATE receipts SET date = ?, category = ?, tags = ?, items = ?, merchant = ?, location = ?, account = ?, amount = ?, income = ? WHERE id = ?", 
-                           utc, category, tags, items, merchant, location, account, amount, incomeFlag, receipt_id)
+                db.execute("UPDATE receipts SET date = ?, category = ?, tags = ?, items = ?, merchant = ?, location = ?, account = ?, amount = ?, income = ?, image = ? WHERE id = ?", 
+                           utc, category, tags, items, merchant, location, account, amount, incomeFlag, file_data, receipt_id)
                 return redirect("/receipts")
             else:
                 return redirect("/receipts")
@@ -98,16 +100,16 @@ def receipts():
             # Update the database
             if utc and category and amount:
                 print("Inserting receipt into database", 
-                      utc, category, tags, items, merchant, location, account, amount)
-                db.execute("INSERT INTO receipts (date, category, tags, items, merchant, location, account, amount, income) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 
-                           utc, category, tags, items, merchant, location, account, amount, incomeFlag)
+                      utc, category, tags, items, merchant, location, account, amount, incomeFlag)
+                db.execute("INSERT INTO receipts (date, category, tags, items, merchant, location, account, amount, image, income) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+                           utc, category, tags, items, merchant, location, account, amount, file_data, incomeFlag)
                 return redirect("/receipts")
 
             else:
                 return redirect("/receipts")
     
     else:
-        """ Otherwise show the home page"""
+        """ Otherwise show the list of receipts """
         receipts = db.execute("SELECT * FROM receipts")
         addresses = db.execute("SELECT id, name FROM addresses")
         merchants = db.execute("SELECT id, name FROM merchants")
@@ -138,7 +140,6 @@ def receipts():
                 category_data = db.execute("SELECT name FROM categories WHERE id = ?", category_id)
                 receipt['category'] = category_data[0]['name'] if category_data else None
 
-        print("Loaded receipts:", receipts)
         return render_template("receipts.html", 
                                accounts=accounts,
                                addresses=addresses, 
@@ -146,6 +147,15 @@ def receipts():
                                merchants=merchants, 
                                categories=categories,
                                currency_symbol=config.currency_symbol)
+
+@app.route("/receipt_image/<int:receipt_id>")
+def receipt_image(receipt_id):
+    """ Serve the receipt image file """
+    receipt = db.execute("SELECT image FROM receipts WHERE id = ?", receipt_id)
+    if receipt and receipt[0]['image']:
+        return Response(receipt[0]['image'], mimetype='application/octet-stream')
+    else:
+        return "No image found", 404
 
 @app.route("/addresses", methods=["GET", "POST"])
 def addresses():
@@ -205,9 +215,11 @@ def addresses():
         
     else:
         """ Otherwise show the addresses page"""
+        # check to see if there are any receipts to populate dashboard link
+        receipts = db.execute("SELECT COUNT(*) as count FROM receipts")[0]['count'] > 0
         addresses = db.execute("SELECT * FROM addresses")
         print("Loaded addresses:", addresses)
-        return render_template("addresses.html", addresses=addresses)
+        return render_template("addresses.html", addresses=addresses, receipts=receipts)
 
 @app.route("/merchants", methods=["GET", "POST"])
 def merchants():
@@ -257,6 +269,8 @@ def merchants():
     
     else:
         """ Otherwise show the merchants page"""
+        # check to see if there are any receipts to populate dashboard link
+        receipts = db.execute("SELECT COUNT(*) as count FROM receipts")[0]['count'] > 0
         merchants = db.execute("SELECT * FROM merchants")
         addresses = db.execute("SELECT id, name FROM addresses")
 
@@ -267,7 +281,7 @@ def merchants():
                 merchant['location'] = location_data[0]['name'] if location_data else None
 
         print("Loaded merchants:", merchants)
-        return render_template("merchants.html", merchants=merchants, addresses=addresses)
+        return render_template("merchants.html", merchants=merchants, addresses=addresses, receipts=receipts)
 
 @app.route("/accounts", methods=["GET", "POST"])
 def accounts():
@@ -320,6 +334,8 @@ def accounts():
     
     else:
         """ Otherwise show the accounts page"""
+        # check to see if there are any receipts to populate dashboard link
+        receipts = db.execute("SELECT COUNT(*) as count FROM receipts")[0]['count'] > 0
         accounts = db.execute("SELECT * FROM accounts")
         merchants = db.execute("SELECT id, name FROM merchants")
         accounts = db.execute("SELECT * FROM accounts")
@@ -331,7 +347,7 @@ def accounts():
                 account['merchant'] = merchant_data[0]['name'] if merchant_data else None
 
         print("Loaded accounts:", accounts)
-        return render_template("accounts.html", accounts=accounts, merchants=merchants)
+        return render_template("accounts.html", accounts=accounts, merchants=merchants, receipts=receipts)
 
 @app.route("/categories", methods=["GET", "POST"])
 def categories():
@@ -374,9 +390,11 @@ def categories():
     
     else:
         """ Otherwise show the categories page"""
+        # check to see if there are any receipts to populate dashboard link
+        receipts = db.execute("SELECT COUNT(*) as count FROM receipts")[0]['count'] > 0
         Categories = db.execute("SELECT * FROM categories")
         print("Loaded categories:", Categories)
-        return render_template("categories.html", Categories=Categories)
+        return render_template("categories.html", Categories=Categories, receipts=receipts)
 
 @app.route("/dashboard")
 def dashboard():

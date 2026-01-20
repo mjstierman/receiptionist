@@ -42,6 +42,15 @@ def toCurrency(number):
     print("Not a number")
     return False
 
+def toFile(unsafe_file):
+    """ Validate and read the uploaded file """
+    try:
+        file_data = unsafe_file.read()
+        return file_data
+    except Exception as e:
+        print("File upload error:", e)
+        return False
+
 def toDatetime(datetime):
     """ Transform the value to a datetime object """
     try:
@@ -53,7 +62,7 @@ def toDatetime(datetime):
     except ValueError:
         print("Invalid date format")
         return False
-
+  
 def toUTC(datestr, timezone):
     """ Transform the datetime to UTC """
     try:

@@ -20,8 +20,13 @@ def thisMonthSpending(db):
         WHERE strftime('%Y-%m', r.date) = strftime('%Y-%m', 'now')
     """
     result = db.execute(query)
-    net_spending = result[0]['total_spent'] - result[0]['total_income']
-    return net_spending
+    print("This month spending result:", result[0]['total_spent'], result[0]['total_income'])
+    try:
+        net_spending = result[0]['total_spent'] - result[0]['total_income']
+        return f"{net_spending:.2f}"
+    except Exception as e:
+        print("Error calculating net spending:", e)
+        return False
 
 def thisMonthsReceipts(db):
     """ Get all receipts for the current month """
