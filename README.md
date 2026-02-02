@@ -79,3 +79,6 @@ BSD 3-Clause
 
 MIT
 - [bootstrap](https://github.com/twbs/bootstrap/blob/main/LICENSE)
+
+Other
+- [gunicorn](https://github.com/benoitc/gunicorn?tab=License-1-ov-file#readme)
