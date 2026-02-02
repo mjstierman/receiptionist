@@ -11,6 +11,9 @@ WORKDIR /app
 # Copy the requirements file and install the dependencies
 RUN apt-get update && apt-get install -y sqlite3
 COPY src/requirements.txt ./
+
+# Install python packages
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Clone CS50's library from GitHub for usage in the application
@@ -25,17 +28,8 @@ RUN if [ ! -f app.db ]; then \
     sqlite3 app.db < static/schema.sql; \
     fi
 
-# Install NGINX
-RUN apt-get update && \
-    apt-get install -y nginx && \
-    mkdir -p /etc/nginx/sites-available && \
-    mkdir -p /etc/nginx/sites-enabled
-
-# Copy the NGINX configuration file into the container
-COPY nginx.conf /etc/nginx/sites-available/default
-
 # Expose the necessary ports
-EXPOSE 80
+EXPOSE 8000
 
-# Start NGINX and Gunicorn
-CMD ["service", "nginx", "start", "&&", "gunicorn", "--bind 0.0.0.0:8000", "wsgi:app"]
+# Start Gunicorn
+CMD ["/bin/bash", "-c", "gunicorn --bind 0.0.0.0:8000 app:app"]
