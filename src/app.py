@@ -76,9 +76,9 @@ def receipts():
         # Get category ID from name
         category_id = db.execute("SELECT id FROM categories WHERE NAME like ?", unsafe_category)
         category = category_id[0]['id'] if category_id else None
-        # Income flag
+        # Set income flag
         incomeFlag = True if unsafe_incomeFlag == "1" else False
-        # File upload
+        # Read the file binary data
         file_data = to_file(unsafe_file) if unsafe_file else None
 
         if request.form.get("id"):
