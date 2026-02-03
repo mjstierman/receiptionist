@@ -14,12 +14,14 @@
             <p>Welcome to your dashboard.</p>
         </div>
         <div>
-            {% if month_spending > 0 %}
-                <strong><p style="color: red;">Warning: You have overspent your budget by {{ currency_symbol }}{{ month_spending }}</p></strong>
-            {% elif month_spending < 0 %}
-                <strong><p style="color: green;">Good job! You are under your budget by {{ currency_symbol }}{{ -month_spending }}</p></strong>
-            {% else %}
-                <p>You are on track with your budget.</p>
+            {% if month_spending %}
+                {% if month_spending > 0 %}
+                    <strong><p style="color: red;">Warning: You have overspent your budget by {{ currency_symbol }}{{ month_spending }}</p></strong>
+                {% elif month_spending < 0 %}
+                    <strong><p style="color: green;">Good job! You are under your budget by {{ currency_symbol }}{{ -month_spending }}</p></strong>
+                {% else %}
+                    <p>You are on track with your budget.</p>
+                {% endif %}
             {% endif %}
         </div>
         <div>

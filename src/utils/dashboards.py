@@ -1,3 +1,5 @@
+import logging
+
 def top_ten_categories(db):
     """ Get the top ten categories by total amount spent """
     query = """
@@ -20,12 +22,13 @@ def this_month_spending(db):
         WHERE strftime('%Y-%m', r.date) = strftime('%Y-%m', 'now')
     """
     result = db.execute(query)
-    print("This month spending result:", result[0]['total_spent'], result[0]['total_income'])
+    logging.info("This month spending result %s %s", result[0]['total_spent'], result[0]['total_income'])
     try:
-        net_spending = result[0]['total_spent'] - result[0]['total_income']
-        return f"{net_spending:.2f}"
+        net_spending = round(result[0]['total_spent'] - result[0]['total_income'], 2)
+        logging.info("This month spending result: %s", net_spending)
+        return net_spending
     except Exception as e:
-        print("Error calculating net spending:", e)
+        logging.error("Error calculating net spending: %s", e)
         return False
 
 def this_month_receipts(db):

@@ -1,3 +1,4 @@
+import logging
 
 import pytz
 import sqlite3
@@ -29,7 +30,7 @@ def last_four_account(card_number):
         return card_number
     elif len(card_number) > 4:
         return card_number[-4:]
-    print("Invalid card number")
+    logging.error("Invalid card number")
     return False
 
 def to_currency(number):
@@ -39,7 +40,7 @@ def to_currency(number):
         number = float(number)
         if 0 <= number < 100_000_000_000:
             return f"{number:.2f}"
-    print("Not a number")
+    logging.error("Not a number")
     return False
 
 def to_file(unsafe_file):
@@ -48,25 +49,25 @@ def to_file(unsafe_file):
         file_data = unsafe_file.read()
         return file_data
     except Exception as e:
-        print("File upload error:", e)
+        logging.error("File upload error: %s", e)
         return False
 
 def to_datedtime(datetime):
     """ Transform the value to a datetime object """
     try:
-        print("Parsing datetime:", datetime)
+        logging.info("Parsing datetime: %s", datetime)
         # Format the datetime string to a datetime object
         datestr = datetime.replace("T"," ")
         z = dt.strptime(datestr, '%Y-%m-%d %H:%M')
         return datetime
     except ValueError:
-        print("Invalid date format")
+        logging.ERROR("Invalid date format")
         return False
   
 def to_utc(datestr, timezone):
     """ Transform the datetime to UTC """
     try:
-        print("Converting to UTC:", datestr, timezone)
+        logging.info("Converting to UTC:", datestr, timezone)
 
         # Get the timezone object
         tz = pytz.timezone(timezone)
@@ -84,6 +85,6 @@ def to_utc(datestr, timezone):
         return iso_utc
     
     except Exception as e:
-        print("Error converting to UTC:", e)
+        logging.error("Error converting to UTC: %s", e)
         return False
 

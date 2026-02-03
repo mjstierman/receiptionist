@@ -1,3 +1,5 @@
+import logging
+
 import config
 
 from cs50 import SQL
@@ -7,14 +9,14 @@ from utils.validators import to_currency, to_datedtime, to_utc, to_file, last_fo
 
 app = Flask(__name__)
 
-# Ensure templates are auto-reloaded
-app.config["TEMPLATES_AUTO_RELOAD"] = True
-
 # Configure CS50 Library to use SQLite database
 try:
     db = SQL(config.database_url)
 except Exception:
     db = create_db(config.schema_path)
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 @app.route("/")
 def index():
@@ -34,7 +36,7 @@ def receipts():
     if request.form.get("delete"):
         # Get the receipt ID to delete
         receipt_id = request.form.get("delete")
-        print("Deleting receipt with ID:", receipt_id)
+        logging.info("Deleting receipt with ID: %s", receipt_id)
         db.execute("DELETE FROM receipts WHERE id = ?", receipt_id)
         return redirect("/receipts")
     
@@ -84,11 +86,9 @@ def receipts():
         if request.form.get("id"):
             # Editing an existing receipt
             receipt_id = request.form.get("id")
-            print("Editing receipt with ID:", receipt_id)
-
             # Update the extisting entry in the database
             if utc and category and amount:
-                print("Updating receipt in database", 
+                logging.info("Updating receipt in database %s %s %s %s %s %s %s %s %s", 
                       utc, category, tags, items, merchant, location, account, amount, incomeFlag)
                 db.execute("UPDATE receipts SET date = ?, category = ?, tags = ?, items = ?, merchant = ?, location = ?, account = ?, amount = ?, income = ?, image = ? WHERE id = ?", 
                            utc, category, tags, items, merchant, location, account, amount, incomeFlag, file_data, receipt_id)
@@ -99,7 +99,7 @@ def receipts():
         else:
             # Update the database
             if utc and category and amount:
-                print("Inserting receipt into database", 
+                logging.info("Inserting receipt into database %s %s %s %s %s %s %s %s %s", 
                       utc, category, tags, items, merchant, location, account, amount, incomeFlag)
                 db.execute("INSERT INTO receipts (date, category, tags, items, merchant, location, account, amount, image, income) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
                            utc, category, tags, items, merchant, location, account, amount, file_data, incomeFlag)
@@ -163,7 +163,7 @@ def addresses():
     if request.form.get("delete"):
         # Get the address ID to delete
         address_id = request.form.get("delete")
-        print("Deleting address with ID:", address_id)
+        logging.info("Deleting address with ID: %s", address_id)
         db.execute("DELETE FROM addresses WHERE id = ?", address_id)
         return redirect("/addresses")
     
@@ -190,11 +190,11 @@ def addresses():
         if request.form.get("id"):
             # Editing an existing address
             address_id = request.form.get("id")
-            print("Editing address with ID:", address_id)
+            logging.info("Editing address with ID: %s", address_id)
 
             # Update the extisting entry in the database
             if name and city and country:
-                print("Updating address in database", 
+                logging.info("Updating address in database: %s %s %s %s %s %s %s", 
                       name, street1, street2, city, state, postal, country)
                 db.execute("UPDATE addresses SET name = ?, street1 = ?, street2 = ?, city = ?, state = ?, postal = ?, country = ? WHERE id = ?", 
                            name, street1, street2, city, state, postal, country, address_id)
@@ -205,7 +205,7 @@ def addresses():
         else:
             # Create new entry in the database
             if name and city and country:
-                print("Inserting address into database", 
+                logging.info("Inserting address into database: %s %s %s %s %s %s %s", 
                       name, street1, street2, city, state, postal, country)
                 db.execute("INSERT INTO addresses (name, street1, street2, city, state, postal, country) VALUES (?, ?, ?, ?, ?, ?, ?)", 
                            name, street1, street2, city, state, postal, country)
@@ -218,7 +218,7 @@ def addresses():
         # check to see if there are any receipts to populate dashboard link
         receipts = db.execute("SELECT COUNT(*) as count FROM receipts")[0]['count'] > 0
         addresses = db.execute("SELECT * FROM addresses")
-        print("Loaded addresses:", addresses)
+        logging.debug("Loaded addresses: %s", addresses)
         return render_template("addresses.html", addresses=addresses, receipts=receipts)
 
 @app.route("/merchants", methods=["GET", "POST"])
@@ -227,7 +227,7 @@ def merchants():
     if request.form.get("delete"):
         # Get the merchant ID to delete
         merchant_id = request.form.get("delete")
-        print("Deleting merchant with ID:", merchant_id)
+        logging.info("Deleting merchant with ID: %s", merchant_id)
         db.execute("DELETE FROM merchants WHERE id = ?", merchant_id)
         return redirect("/merchants")
     
@@ -246,11 +246,11 @@ def merchants():
         if request.form.get("id"):
             # Editing an existing merchant
             merchant_id = request.form.get("id")
-            print("Editing merchant with ID:", merchant_id)
+            logging.info("Editing merchant with ID: %s", merchant_id)
 
             # Update the extisting entry in the database
             if name:
-                print("Updating merchant in database", name, location)
+                logging.info("Updating merchant in database %s %s", name, location)
                 db.execute("UPDATE merchants SET name = ?, location = ? WHERE id = ?", 
                            name, location, merchant_id)
                 return redirect("/merchants")
@@ -260,7 +260,7 @@ def merchants():
         else:
         # Update the database
             if name:
-                print("Inserting merchant into database", name, location)
+                logging.info("Inserting merchant into database %s %s", name, location)
                 db.execute("INSERT INTO merchants (name, location) VALUES (?, ?)", 
                            name, location)
                 return redirect("/merchants")
@@ -280,7 +280,7 @@ def merchants():
                 location_data = db.execute("SELECT name FROM addresses WHERE id = ?", location_id)
                 merchant['location'] = location_data[0]['name'] if location_data else None
 
-        print("Loaded merchants:", merchants)
+        logging.debug("Loaded merchants: %s", merchants)
         return render_template("merchants.html", merchants=merchants, addresses=addresses, receipts=receipts)
 
 @app.route("/accounts", methods=["GET", "POST"])
@@ -289,7 +289,7 @@ def accounts():
     if request.form.get("delete"):
         # Get the account ID to delete
         account_id = request.form.get("delete")
-        print("Deleting account with ID:", account_id)
+        logging.info("Deleting account with ID: %s", account_id)
         db.execute("DELETE FROM accounts WHERE id = ?", account_id)
         return redirect("/accounts")
     
@@ -310,11 +310,11 @@ def accounts():
         if request.form.get("id"):
             # Editing an existing account
             account_id = request.form.get("id")
-            print("Editing account with ID:", account_id)
+            logging.info("Editing account with ID: %s", account_id)
 
             # Update the extisting entry in the database
             if name and merchant and lastfour:
-                print("Updating account in database", name, merchant, lastfour, balance)
+                logging.info("Updating account in database %s %s %s %s", name, merchant, lastfour, balance)
                 db.execute("UPDATE accounts SET name = ?, merchant = ?, lastfour = ?, balance = ? WHERE id = ?", 
                            name, merchant, lastfour, balance,  account_id)
                 return redirect("/accounts")
@@ -324,7 +324,7 @@ def accounts():
         else:
             # Create new entry in the database
             if name and merchant and lastfour:
-                print("Inserting account into database", name, merchant, lastfour, balance)
+                logging.info("Inserting account into database %s %s %s %s", name, merchant, lastfour, balance)
                 db.execute("INSERT INTO accounts (name, merchant, lastfour, balance) VALUES (?, ?, ?, ?)", 
                            name, merchant, lastfour, balance)
                 return redirect("/accounts")
@@ -345,8 +345,7 @@ def accounts():
             if merchant_id:
                 merchant_data = db.execute("SELECT name FROM merchants WHERE id = ?", merchant_id)
                 account['merchant'] = merchant_data[0]['name'] if merchant_data else None
-
-        print("Loaded accounts:", accounts)
+        logger.debug("Loaded accounts:", accounts)
         return render_template("accounts.html", accounts=accounts, merchants=merchants, receipts=receipts)
 
 @app.route("/categories", methods=["GET", "POST"])
@@ -355,7 +354,7 @@ def categories():
     if request.form.get("delete"):
         # Get the category ID to delete
         category_id = request.form.get("delete")
-        print("Deleting category with ID:", category_id)
+        logging.info("Deleting category with ID: %s", category_id)
         db.execute("DELETE FROM categories WHERE id = ?", category_id)
         return redirect("/categories")
     
@@ -369,10 +368,10 @@ def categories():
         if request.form.get("id"):
             # Editing an existing category
             category_id = request.form.get("id")
-            print("Editing category with ID:", category_id)
+            logging.info("Editing category with ID: %s", category_id)
             # Update the extisting entry in the database
             if name:
-                print("Updating category in database", name)
+                logging.info("Updating category in database %s", name)
                 db.execute("UPDATE categories SET name = ? WHERE id = ?", name, category_id)
                 return redirect("/categories")
             else:
@@ -381,7 +380,7 @@ def categories():
         else:
             # Update the database
             if name:
-                print("Inserting category into database", name)
+                logging.info("Inserting category into database %s", name)
                 db.execute("INSERT INTO categories (name) VALUES (?)", name)
                 return redirect("/categories")
 
@@ -393,7 +392,7 @@ def categories():
         # check to see if there are any receipts to populate dashboard link
         receipts = db.execute("SELECT COUNT(*) as count FROM receipts")[0]['count'] > 0
         Categories = db.execute("SELECT * FROM categories")
-        print("Loaded categories:", Categories)
+        logging.debug("Loaded categories: %s", Categories)
         return render_template("categories.html", Categories=Categories, receipts=receipts)
 
 @app.route("/dashboard")
@@ -404,13 +403,13 @@ def dashboard():
         return redirect("/receipts")
     
     top_categories = top_ten_categories(db)
-    print("Top categories:", top_categories)
+    logger.debug("Top categories:", top_categories)
 
     month_spending = this_month_spending(db)
-    print("This month spending:", month_spending)
+    logger.debug("This month spending:", month_spending)
 
     month_receipts = this_month_receipts(db)
-    print("This month's receipts:", month_receipts)
+    logger.debug("This month's receipts:", month_receipts)
 
     for receipt in month_receipts:
         location_id = receipt['location']
