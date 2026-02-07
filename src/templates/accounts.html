@@ -25,7 +25,7 @@
                     <select name="merchant" required>
                         <option value="" disabled selected>Select Merchant</option>
                         {% for merchant in merchants %}
-                            <option value="{{ merchant['name'] }}">{{ merchant['name'] }}</option>
+                            <option value="{{ merchant['id'] }}">{{ merchant['name'] }}</option>
                         {% endfor %}
                     </select>
                     <input name="lastfour" placeholder="last four digits" type="number" required>

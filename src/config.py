@@ -11,7 +11,7 @@ currency_symbol = "$"
 
 ### Debugging and Development ###
 TEMPLATES_AUTO_RELOAD = True # Reload templates when html changed
-LOG_LEVEL = logging.INFO # NOTSET DEBUG INFO WARNING ERROR CRITICAL
+LOG_LEVEL = logging.DEBUG # NOTSET DEBUG INFO WARNING ERROR CRITICAL
 
 # Logging Config
 logging.basicConfig(
@@ -23,3 +23,6 @@ logging.basicConfig(
         logging.StreamHandler()  # Also print to console
     ]
 )
+
+# Allowable extensions for receipt image uploads
+# ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'tga', 'pdf', 'tif', 'tiff'}

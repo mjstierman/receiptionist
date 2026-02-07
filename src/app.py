@@ -1,22 +1,30 @@
-import logging
+""" Main application file for Receiptionist """
 
+import logging
 import config
 
 from cs50 import SQL
 from flask import Flask, render_template, redirect, request, Response
+
 from utils.dashboards import top_ten_categories, this_month_receipts, this_month_spending
-from utils.validators import to_currency, to_datedtime, to_utc, to_file, last_four_account, create_db
+from utils.currency import to_currency, to_cents
+from utils.time import append_timezone, to_UTC
+
+import utils.schemas as schemas
+import utils.crud as crud
 
 app = Flask(__name__)
 
-# Configure CS50 Library to use SQLite database
-try:
-    db = SQL(config.database_url)
-except Exception:
-    db = create_db(config.schema_path)
-
 # Configure logging
 logger = logging.getLogger(__name__)
+
+# Configure CS50 Library to use SQLite database
+try:
+    logging.info("Connecting to database at %s", config.database_url)
+    db = SQL(config.database_url)
+except Exception:
+    logging.error("Database connection failed, creating new database using schema at %s", config.schema_path)
+    db = crud.create_db(config.schema_path)
 
 @app.route("/")
 def index():
@@ -33,15 +41,21 @@ def layout():
 @app.route("/receipts", methods=["GET", "POST"])
 def receipts():
     """ Load the home page """
+    # Handle receipt actions first
     if request.form.get("delete"):
         # Get the receipt ID to delete
         receipt_id = request.form.get("delete")
         logging.info("Deleting receipt with ID: %s", receipt_id)
-        db.execute("DELETE FROM receipts WHERE id = ?", receipt_id)
+        try:
+            crud.delete_receipt(receipt_id)
+        except Exception as e:
+            logging.error("Error deleting receipt with ID %s: %s", receipt_id, e)
+            return redirect("/receipts") 
         return redirect("/receipts")
     
     if request.method == "POST":
         # Get the form data
+        logging.debug("Received form data: %s", request.form)
         unsafe_datetime = request.form.get("datetime")
         unsafe_timezone = request.form.get("timezone")
         unsafe_category = request.form.get("category")
@@ -54,62 +68,45 @@ def receipts():
         unsafe_incomeFlag = request.form.get("income")
         unsafe_file = request.files['file']
 
-        # Validate the data
-        datetime = to_datedtime(unsafe_datetime)
-        utc = to_utc(datetime, unsafe_timezone)
-        tags = unsafe_tags
-        items = unsafe_items
-        amount = to_currency(unsafe_amount)
-        # Get account ID from name
-        account_id = db.execute("SELECT id FROM accounts WHERE NAME like ?", unsafe_account)
-        account = account_id[0]['id'] if account_id else None
-        # Get category ID from name
-        category_id = db.execute("SELECT id FROM categories WHERE NAME like ?", unsafe_category)
-        category = category_id[0]['id'] if category_id else None
-        # Get merchant ID from name
-        merchant_id = db.execute("SELECT id FROM merchants WHERE NAME like ?", unsafe_merchant)
-        merchant = merchant_id[0]['id'] if merchant_id else None
-        # Get location ID from name
-        location_id = db.execute("SELECT id FROM addresses WHERE NAME like ?", unsafe_location)
-        location = location_id[0]['id'] if location_id else None
-        # Get account ID from name
-        account_id = db.execute("SELECT id FROM accounts WHERE NAME like ?", unsafe_account)
-        account = account_id[0]['id'] if account_id else None
-        # Get category ID from name
-        category_id = db.execute("SELECT id FROM categories WHERE NAME like ?", unsafe_category)
-        category = category_id[0]['id'] if category_id else None
-        # Set income flag
-        incomeFlag = True if unsafe_incomeFlag == "1" else False
-        # Read the file binary data
-        file_data = to_file(unsafe_file) if unsafe_file else None
+        str_date = append_timezone(unsafe_datetime, unsafe_timezone)
+        new_date = to_UTC(str_date)
+
+        # Create a new receipt object with the validated data
+        new_receipt = schemas.receipt(
+            id = -1, # placeholder, will be set by the database or specified later
+            date = new_date,
+            category = unsafe_category if crud.get_category(unsafe_category) else None,
+            tags = unsafe_tags if unsafe_tags else None,
+            items = unsafe_items if unsafe_items else None,
+            merchant = unsafe_merchant if crud.get_merchant(unsafe_merchant) else None,
+            location = unsafe_location if crud.get_address(unsafe_location) else None,
+            account = unsafe_account if crud.get_account(unsafe_account) else None,
+            amount = to_cents(unsafe_amount),
+            income = True if unsafe_incomeFlag == "1" else False,
+            image = schemas.receipt.validate_file(unsafe_file) if unsafe_file else None
+        )
 
         if request.form.get("id"):
             # Editing an existing receipt
             receipt_id = request.form.get("id")
-            # Update the extisting entry in the database
-            if utc and category and amount:
-                logging.info("Updating receipt in database %s %s %s %s %s %s %s %s %s", 
-                      utc, category, tags, items, merchant, location, account, amount, incomeFlag)
-                db.execute("UPDATE receipts SET date = ?, category = ?, tags = ?, items = ?, merchant = ?, location = ?, account = ?, amount = ?, income = ?, image = ? WHERE id = ?", 
-                           utc, category, tags, items, merchant, location, account, amount, incomeFlag, file_data, receipt_id)
-                return redirect("/receipts")
-            else:
-                return redirect("/receipts")
+            # Update the new_receipt before insertion
+            new_receipt.id = receipt_id
         
-        else:
-            # Update the database
-            if utc and category and amount:
-                logging.info("Inserting receipt into database %s %s %s %s %s %s %s %s %s", 
-                      utc, category, tags, items, merchant, location, account, amount, incomeFlag)
-                db.execute("INSERT INTO receipts (date, category, tags, items, merchant, location, account, amount, image, income) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
-                           utc, category, tags, items, merchant, location, account, amount, file_data, incomeFlag)
-                return redirect("/receipts")
-
+        # Insert or Update the new receipt into the database
+        try:
+            if request.form.get("id"):
+                logging.info("Updating receipt with ID: %s", receipt_id)
+                crud.update_receipt(receipt_id, new_receipt)
             else:
-                return redirect("/receipts")
+                logging.info("Inserting new receipt into database.")
+                crud.insert_receipt(new_receipt)
+        except Exception as e:
+            logging.error("Error inserting/updating receipt: %s", e)
+            return redirect("/receipts")
+        return redirect("/receipts")
     
+    # Otherwise show the list of receipts
     else:
-        """ Otherwise show the list of receipts """
         receipts = db.execute("SELECT * FROM receipts")
         addresses = db.execute("SELECT id, name FROM addresses")
         merchants = db.execute("SELECT id, name FROM merchants")
@@ -160,11 +157,16 @@ def receipt_image(receipt_id):
 @app.route("/addresses", methods=["GET", "POST"])
 def addresses():
     """ Load the addresses page """
+    # Handle address actions first
     if request.form.get("delete"):
         # Get the address ID to delete
         address_id = request.form.get("delete")
         logging.info("Deleting address with ID: %s", address_id)
-        db.execute("DELETE FROM addresses WHERE id = ?", address_id)
+        try:
+            crud.delete_address(address_id)
+        except Exception as e:
+            logging.error("Error deleting address with ID %s: %s", address_id, e)
+            return redirect("/addresses")
         return redirect("/addresses")
     
     if request.method == "POST":
@@ -178,13 +180,16 @@ def addresses():
         unsafe_country = request.form.get("country")
 
         # Validate the data
-        name = unsafe_name
-        street1 = unsafe_street1
-        street2 = unsafe_street2
-        city = unsafe_city
-        state = unsafe_state
-        postal = unsafe_postal
-        country = unsafe_country
+        new_address = schemas.address(
+            id = -1, # placeholder, will be set by the database or specified later
+            name = unsafe_name,
+            street1 = unsafe_street1 if unsafe_street1 else None,
+            street2 = unsafe_street2 if unsafe_street2 else None,
+            city = unsafe_city if unsafe_city else None,
+            state = unsafe_state if unsafe_state else None,
+            postal = unsafe_postal if unsafe_postal else None,
+            country = unsafe_country
+        )
         
         # Check if editing an existing address
         if request.form.get("id"):
@@ -192,29 +197,21 @@ def addresses():
             address_id = request.form.get("id")
             logging.info("Editing address with ID: %s", address_id)
 
-            # Update the extisting entry in the database
-            if name and city and country:
-                logging.info("Updating address in database: %s %s %s %s %s %s %s", 
-                      name, street1, street2, city, state, postal, country)
-                db.execute("UPDATE addresses SET name = ?, street1 = ?, street2 = ?, city = ?, state = ?, postal = ?, country = ? WHERE id = ?", 
-                           name, street1, street2, city, state, postal, country, address_id)
-                return redirect("/addresses")
+        # Insert or Update the extisting entry in the database
+        try:
+            if request.form.get("id"):
+                logging.info("Updating address with ID: %s", address_id)
+                crud.update_address(address_id, new_address)
             else:
-                return redirect("/addresses")
-        
-        else:
-            # Create new entry in the database
-            if name and city and country:
-                logging.info("Inserting address into database: %s %s %s %s %s %s %s", 
-                      name, street1, street2, city, state, postal, country)
-                db.execute("INSERT INTO addresses (name, street1, street2, city, state, postal, country) VALUES (?, ?, ?, ?, ?, ?, ?)", 
-                           name, street1, street2, city, state, postal, country)
-                return redirect("/addresses")
-            else:
-                return redirect("/addresses")
-        
+                logging.info("Inserting new address '%s' into database.", new_address.name)
+                crud.insert_address(new_address)
+        except Exception as e:
+            logging.error("Error inserting/updating receipt: %s", e)
+            return redirect("/addresses")
+        return redirect("/addresses")
+    
+    # Otherwise show the addresses page
     else:
-        """ Otherwise show the addresses page"""
         # check to see if there are any receipts to populate dashboard link
         receipts = db.execute("SELECT COUNT(*) as count FROM receipts")[0]['count'] > 0
         addresses = db.execute("SELECT * FROM addresses")
@@ -228,7 +225,11 @@ def merchants():
         # Get the merchant ID to delete
         merchant_id = request.form.get("delete")
         logging.info("Deleting merchant with ID: %s", merchant_id)
-        db.execute("DELETE FROM merchants WHERE id = ?", merchant_id)
+        try:
+            crud.delete_merchant(merchant_id)
+        except Exception as e:
+            logging.error("Error deleting merchant with ID %s: %s", merchant_id, e)
+            return redirect("/merchants") 
         return redirect("/merchants")
     
     if request.method == "POST":
@@ -237,38 +238,34 @@ def merchants():
         unsafe_location = request.form.get("location")
 
         # Validate the data
-        name = unsafe_name
-        location_id = db.execute("SELECT id FROM addresses WHERE NAME like ?", 
-                                 unsafe_location)
-        location = location_id[0]['id'] if location_id else None
+        new_merchant = schemas.merchant(
+            id = -1, # placeholder, will be set by the database or specified later
+            name = unsafe_name,
+            location = unsafe_location if unsafe_location else None
+        )
 
         # Check if editing an existing merchant
         if request.form.get("id"):
             # Editing an existing merchant
             merchant_id = request.form.get("id")
+            new_merchant.id = merchant_id
             logging.info("Editing merchant with ID: %s", merchant_id)
 
-            # Update the extisting entry in the database
-            if name:
-                logging.info("Updating merchant in database %s %s", name, location)
-                db.execute("UPDATE merchants SET name = ?, location = ? WHERE id = ?", 
-                           name, location, merchant_id)
-                return redirect("/merchants")
+        # Insert or Update the extisting entry in the database
+        try:
+            if request.form.get("id"):
+                logging.info("Updating merchant with ID: %s", merchant_id)
+                crud.update_merchant(merchant_id, new_merchant)
             else:
-                return redirect("/merchants")
-
-        else:
-        # Update the database
-            if name:
-                logging.info("Inserting merchant into database %s %s", name, location)
-                db.execute("INSERT INTO merchants (name, location) VALUES (?, ?)", 
-                           name, location)
-                return redirect("/merchants")
-            else:
-                return redirect("/merchants")
+                logging.info("Inserting new merchant '%s' into database.", new_merchant.name)
+                crud.insert_merchant(new_merchant)
+        except Exception as e:
+            logging.error("Error inserting/updating merchant: %s", e)
+            return redirect("/merchants")
+        return redirect("/merchants")    
     
+    # Otherwise show the merchants page
     else:
-        """ Otherwise show the merchants page"""
         # check to see if there are any receipts to populate dashboard link
         receipts = db.execute("SELECT COUNT(*) as count FROM receipts")[0]['count'] > 0
         merchants = db.execute("SELECT * FROM merchants")
@@ -290,7 +287,11 @@ def accounts():
         # Get the account ID to delete
         account_id = request.form.get("delete")
         logging.info("Deleting account with ID: %s", account_id)
-        db.execute("DELETE FROM accounts WHERE id = ?", account_id)
+        try: 
+            crud.delete_account(account_id)
+        except Exception as e:            
+            logging.error("Error deleting account with ID %s: %s", account_id, e)
+            return redirect("/accounts")
         return redirect("/accounts")
     
     if request.method == "POST":
@@ -301,36 +302,33 @@ def accounts():
         unsafe_balance = request.form.get("balance")
 
         # Validate the data
-        name = unsafe_name
-        merchant_id = db.execute("SELECT id FROM merchants WHERE NAME like ?", unsafe_merchant)
-        merchant = merchant_id[0]['id'] if merchant_id else None
-        lastfour = last_four_account(unsafe_lastfour)
-        balance = to_currency(unsafe_balance)
+        new_account = schemas.account(
+            id = -1, # placeholder, will be set by the database or specified later
+            name = unsafe_name,
+            merchant = unsafe_merchant if unsafe_merchant else None,
+            lastfour = unsafe_lastfour,
+            balance = to_cents(unsafe_balance)
+        )
 
+        # Check if editing an existing account
         if request.form.get("id"):
             # Editing an existing account
             account_id = request.form.get("id")
+            new_account.id = account_id
             logging.info("Editing account with ID: %s", account_id)
-
-            # Update the extisting entry in the database
-            if name and merchant and lastfour:
-                logging.info("Updating account in database %s %s %s %s", name, merchant, lastfour, balance)
-                db.execute("UPDATE accounts SET name = ?, merchant = ?, lastfour = ?, balance = ? WHERE id = ?", 
-                           name, merchant, lastfour, balance,  account_id)
-                return redirect("/accounts")
+        
+        # Insert or Update the extisting entry in the database
+        try:
+            if request.form.get("id"):
+                logging.info("Updating account with ID: %s", account_id)
+                crud.update_account(account_id, new_account)
             else:
-                return redirect("/accounts")
-
-        else:
-            # Create new entry in the database
-            if name and merchant and lastfour:
-                logging.info("Inserting account into database %s %s %s %s", name, merchant, lastfour, balance)
-                db.execute("INSERT INTO accounts (name, merchant, lastfour, balance) VALUES (?, ?, ?, ?)", 
-                           name, merchant, lastfour, balance)
-                return redirect("/accounts")
-
-            else:
-                return redirect("/accounts")
+                logging.info("Inserting new account '%s' into database.", new_account.name)
+                crud.insert_account(new_account)
+        except Exception as e:
+            logging.error("Error inserting/updating account: %s", e)
+            return redirect("/accounts")
+        return redirect("/accounts")
     
     else:
         """ Otherwise show the accounts page"""
@@ -355,7 +353,11 @@ def categories():
         # Get the category ID to delete
         category_id = request.form.get("delete")
         logging.info("Deleting category with ID: %s", category_id)
-        db.execute("DELETE FROM categories WHERE id = ?", category_id)
+        try:
+            crud.delete_category(category_id)
+        except Exception as e:
+            logging.error("Error deleting category with ID %s: %s", category_id, e)
+            return redirect("/categories")
         return redirect("/categories")
     
     if request.method == "POST":
@@ -363,29 +365,29 @@ def categories():
         unsafe_name = request.form.get("name")
 
         # Validate the data
-        name = unsafe_name
+        new_category = schemas.category(
+            id = -1, # placeholder, will be set by the database or specified later
+            name = unsafe_name
+        )
 
         if request.form.get("id"):
             # Editing an existing category
             category_id = request.form.get("id")
             logging.info("Editing category with ID: %s", category_id)
-            # Update the extisting entry in the database
-            if name:
-                logging.info("Updating category in database %s", name)
-                db.execute("UPDATE categories SET name = ? WHERE id = ?", name, category_id)
-                return redirect("/categories")
+            new_category.id = category_id
+        
+        # Insert or Update the extisting entry in the database
+        try:
+            if request.form.get("id"):
+                logging.info("Updating category with ID: %s", category_id)
+                crud.update_category(category_id, new_category)
             else:
-                return redirect("/categories")
-
-        else:
-            # Update the database
-            if name:
-                logging.info("Inserting category into database %s", name)
-                db.execute("INSERT INTO categories (name) VALUES (?)", name)
-                return redirect("/categories")
-
-            else:
-                return redirect("/categories")
+                logging.info("Inserting new category '%s' into database.", new_category.name)
+                crud.insert_category(new_category)
+        except Exception as e:
+            logging.error("Error inserting/updating category: %s", e)
+            return redirect("/categories")
+        return redirect("/categories")
     
     else:
         """ Otherwise show the categories page"""

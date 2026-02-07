@@ -22,7 +22,7 @@
                     <select name="location" class="form-select" required>
                         <option value="" disabled selected>Select Address</option>
                         {% for address in addresses %}
-                            <option value="{{ address['name'] }}">{{ address['name'] }}</option>
+                            <option value="{{ address['id'] }}">{{ address['name'] }}</option>
                         {% endfor %}
                     </select><br>
                     <button type="submit" class="btn btn-primary">Update Merchant</button>
