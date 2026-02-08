@@ -9,6 +9,7 @@ from flask import Flask, render_template, redirect, request, Response
 from utils.dashboards import top_ten_categories, this_month_receipts, this_month_spending
 from utils.currency import to_currency, to_cents
 from utils.time import append_timezone, to_UTC
+from utils.files import to_base64
 
 import utils.schemas as schemas
 import utils.crud as crud
@@ -83,7 +84,7 @@ def receipts():
             account = unsafe_account if crud.get_account(unsafe_account) else None,
             amount = to_cents(unsafe_amount),
             income = True if unsafe_incomeFlag == "1" else False,
-            image = schemas.receipt.validate_file(unsafe_file) if unsafe_file else None
+            image = to_base64(unsafe_file) if unsafe_file else None
         )
 
         if request.form.get("id"):
@@ -404,37 +405,49 @@ def dashboard():
     if db.execute("SELECT COUNT(*) as count FROM receipts")[0]['count'] <= 0:
         return redirect("/receipts")
     
-    top_categories = top_ten_categories(db)
-    logger.debug("Top categories:", top_categories)
+    try:
+        top_categories = top_ten_categories(db)
+        logger.debug("Top categories:", top_categories)
+    except Exception as e:
+        logging.error("Error loading top categories or no results: %s", e)
+        top_categories = []
 
-    month_spending = this_month_spending(db)
-    logger.debug("This month spending:", month_spending)
+    try:
+        month_spending = this_month_spending(db)
+        logger.debug("This month spending:", month_spending)
+    except Exception as e:
+        logging.error("Error loading this month spending or no results: %s", e)
+        month_spending = []
 
-    month_receipts = this_month_receipts(db)
-    logger.debug("This month's receipts:", month_receipts)
+    try:
+        month_receipts = this_month_receipts(db)
+        logger.debug("This month's receipts:", month_receipts)
+    except Exception as e:
+        logging.error("Error loading this month receipts or no results: %s", e)
+        month_receipts = []
 
-    for receipt in month_receipts:
-        location_id = receipt['location']
-        if location_id:
-            location_data = db.execute("SELECT name FROM addresses WHERE id = ?", location_id)
-            receipt['location'] = location_data[0]['name'] if location_data else None
-    for receipt in month_receipts:
-        merchant_id = receipt['merchant']
-        if merchant_id:
-            merchant_data = db.execute("SELECT name FROM merchants WHERE id = ?", merchant_id)
-            receipt['merchant'] = merchant_data[0]['name'] if merchant_data else None
-    for receipt in month_receipts:
-        account_id = receipt['account']
-        if account_id:
-            account_data = db.execute("SELECT name FROM accounts WHERE id = ?", account_id)
-            receipt['account'] = account_data[0]['name'] if account_data else None
-    for receipt in month_receipts:
-        category_id = receipt['category']
-        if category_id:
-            category_data = db.execute("SELECT name FROM categories WHERE id = ?", category_id)
-            receipt['category'] = category_data[0]['name'] if category_data else None
-
-    month_receipts.sort(key=lambda x: x['date'])
+    if month_receipts:
+        for receipt in month_receipts:
+            location_id = receipt['location']
+            if location_id:
+                location_data = db.execute("SELECT name FROM addresses WHERE id = ?", location_id)
+                receipt['location'] = location_data[0]['name'] if location_data else None
+        for receipt in month_receipts:
+            merchant_id = receipt['merchant']
+            if merchant_id:
+                merchant_data = db.execute("SELECT name FROM merchants WHERE id = ?", merchant_id)
+                receipt['merchant'] = merchant_data[0]['name'] if merchant_data else None
+        for receipt in month_receipts:
+            account_id = receipt['account']
+            if account_id:
+                account_data = db.execute("SELECT name FROM accounts WHERE id = ?", account_id)
+                receipt['account'] = account_data[0]['name'] if account_data else None
+        for receipt in month_receipts:
+            category_id = receipt['category']
+            if category_id:
+                category_data = db.execute("SELECT name FROM categories WHERE id = ?", category_id)
+                receipt['category'] = category_data[0]['name'] if category_data else None
+        month_receipts.sort(key=lambda x: x['date'])
 
     return render_template("dashboard.html", 
                            top_categories=top_categories, 

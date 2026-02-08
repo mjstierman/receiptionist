@@ -1,9 +1,7 @@
 """Schemas for the database models"""
 
-import logging
-import base64
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator, ValidationError
+from pydantic import BaseModel, Field
 
 # from config import ALLOWED_EXTENSIONS
 
@@ -45,34 +43,3 @@ class receipt (BaseModel):
     amount: int # store currency as integer
     income: bool
     image: str | None = None # optional, base64 string of the receipt img
-
-    # Image validation and processing
-    @field_validator('image', mode='before')
-    @classmethod
-    def validate_file(cls, file):
-        # Don't process an empty or no file
-        if not file: return None
-        
-        try:
-            # Check if file has a filename attribute
-            filename = getattr(file, 'filename', None)
-            if not filename:
-                raise ValidationError("Uploaded file must have a filename")
-
-            # Extract file extension and check allowed types
-            # ext = filename.rsplit('.', 1)[-1].lower()
-            # if ext not in ALLOWED_EXTENSIONS:
-            #     raise ValidationError(f"Unsupported file type: .{ext}")
-
-            # Read file content
-            file_data = file.read()
-            if not file_data:
-                raise ValidationError("Uploaded file is empty")
-
-            # Store as base64
-            encoded_data = base64.b64encode(file_data)
-            return encoded_data
-
-        except Exception as e:
-            logging.error("File upload validation error: %s", e)
-            raise ValidationError("File upload error")
